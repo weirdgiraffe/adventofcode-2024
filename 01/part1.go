@@ -10,7 +10,7 @@ import (
 )
 
 func main() {
-	left, right, err := readLists("input")
+	left, right, err := readLists("input1")
 	if err != nil {
 		log.Fatalf("failed to read lists: %v", err)
 	}
