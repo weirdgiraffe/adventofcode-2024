@@ -10,7 +10,7 @@ import (
 )
 
 func main() {
-	reports := readReports("input")
+	reports := readReports("../input")
 	sum := 0
 	for i := range reports {
 		sum += int(safeReport(reports[i]))
