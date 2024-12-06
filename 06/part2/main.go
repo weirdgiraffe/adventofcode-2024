@@ -25,27 +25,31 @@ func solve(r io.Reader) int {
 	if err != nil {
 		panic("failed to read input")
 	}
-	return patrol(string(text))
+	return NumberOfObsticles(string(text))
 }
 
-type PositionWithDirection struct {
+type PathFragment struct {
 	Position
 	Direction int
 }
 
-func patrolPath(m *Map, pos Position, trace bool) (path []Position, loop bool) {
-	visited := make(map[PositionWithDirection]bool)
+// PatrolPath returns the patrol path in m starting at pos, and id this path has a loop
+// it trace is set to true, then it will modify the cells in m, making m nicely printable.
+func PatrolPath(m *Map, pos Position, trace bool) (path []Position, loop bool) {
+	visited := make(map[PathFragment]bool)
 	dir := DirectionUp
 	for {
-		pd := PositionWithDirection{Position: pos, Direction: dir}
-		if visited[pd] {
+		pf := PathFragment{Position: pos, Direction: dir}
+		if visited[pf] {
 			return path, true
 		}
 		path = append(path, pos)
-		visited[pd] = true
+		visited[pf] = true
+
 		if trace {
 			m.cells[pos.Y][pos.X] = DirectionSym(dir)
 		}
+
 		nextPos := m.Step(pos, dir)
 		if !m.Contains(nextPos) {
 			return path, false
@@ -54,6 +58,7 @@ func patrolPath(m *Map, pos Position, trace bool) (path []Position, loop bool) {
 		if m.At(nextPos) == '#' {
 			dir = TurnRight(dir)
 			path = path[:len(path)-1]
+			visited[pf] = false
 			continue
 		}
 
@@ -62,22 +67,23 @@ func patrolPath(m *Map, pos Position, trace bool) (path []Position, loop bool) {
 
 }
 
-func patrol(text string) int {
+func NumberOfObsticles(text string) int {
 	m := asMap(text)
-	startingPos := m.StartingPosition()
+	sp := m.StartingPosition()
 	acc := 0
-	path, _ := patrolPath(&m, startingPos, false)
+	initialPath, _ := PatrolPath(&m, sp, false)
 
-	uniq := make(map[Position]bool)
-	for i := range path {
-		uniq[path[i]] = true
+	uniqPositions := make(map[Position]bool)
+	for i := range initialPath {
+		uniqPositions[initialPath[i]] = true
 	}
-	for pos := range uniq {
-		if pos == startingPos {
+
+	for pos := range uniqPositions {
+		if pos == sp {
 			continue
 		}
 		mm := m.WithSymbolAt(pos, '#')
-		if _, loop := patrolPath(&mm, startingPos, true); loop {
+		if _, loop := PatrolPath(&mm, sp, true); loop {
 			// 			fmt.Println("loop detected")
 			// 			mm.Print(startingPos)
 			acc++
