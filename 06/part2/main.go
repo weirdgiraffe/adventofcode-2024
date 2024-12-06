@@ -28,52 +28,62 @@ func solve(r io.Reader) int {
 	return patrol(string(text))
 }
 
-func patrolPath(m *Map) (path []Position) {
+type PositionWithDirection struct {
+	Position
+	Direction int
+}
+
+func patrolPath(m *Map, pos Position, trace bool) (path []Position, loop bool) {
+	visited := make(map[PositionWithDirection]bool)
 	dir := DirectionUp
-	pos := m.StartingPosition()
 	for {
-		if len(path) == 0 || path[len(path)-1] != pos {
-			path = append(path, pos)
+		pd := PositionWithDirection{Position: pos, Direction: dir}
+		if visited[pd] {
+			return path, true
+		}
+		path = append(path, pos)
+		visited[pd] = true
+		if trace {
+			m.cells[pos.Y][pos.X] = DirectionSym(dir)
 		}
 		nextPos := m.Step(pos, dir)
 		if !m.Contains(nextPos) {
-			return path
+			return path, false
 		}
+
 		if m.At(nextPos) == '#' {
 			dir = TurnRight(dir)
+			path = path[:len(path)-1]
 			continue
 		}
+
 		pos = nextPos
 	}
 
 }
 
-func PrintPath(path []Position) {
-	if len(path) == 0 {
-		return
-	}
-	prev := path[0]
-	for i := 1; i < len(path); i++ {
-		switch {
-		case prev.X < path[i].X:
-			fmt.Print(">")
-		case prev.X > path[i].X:
-			fmt.Print("<")
-		case prev.Y < path[i].Y:
-			fmt.Print("v")
-		case prev.Y > path[i].Y:
-			fmt.Print("^")
-		}
-		prev = path[i]
-	}
-	fmt.Println()
-}
-
 func patrol(text string) int {
 	m := asMap(text)
-	path := patrolPath(&m)
-	PrintPath(path)
-	return 0
+	startingPos := m.StartingPosition()
+	acc := 0
+	path, _ := patrolPath(&m, startingPos, false)
+
+	uniq := make(map[Position]bool)
+	for i := range path {
+		uniq[path[i]] = true
+	}
+	for pos := range uniq {
+		if pos == startingPos {
+			continue
+		}
+		mm := m.WithSymbolAt(pos, '#')
+		if _, loop := patrolPath(&mm, startingPos, true); loop {
+			// 			fmt.Println("loop detected")
+			// 			mm.Print(startingPos)
+			acc++
+		}
+	}
+	return acc
 }
 
 const (
@@ -83,27 +93,27 @@ const (
 	DirectionLeft  = 3
 )
 
-func DirectionSym(d int) string {
+func DirectionSym(d int) byte {
 	switch d {
 	case DirectionUp:
-		return "^"
+		return '^'
 	case DirectionRight:
-		return ">"
+		return '>'
 	case DirectionDown:
-		return "v"
+		return 'v'
 	case DirectionLeft:
-		return "<"
+		return '<'
 	default:
 		panic("invalid direction")
 	}
 }
 
 func asMap(text string) Map {
-	l := make([]string, 0)
+	l := make([][]byte, 0)
 	for _, s := range strings.Split(text, "\n") {
 		s = strings.TrimSpace(s)
 		if len(s) > 0 {
-			l = append(l, s)
+			l = append(l, []byte(s))
 		}
 	}
 	return Map{
@@ -119,9 +129,22 @@ type Position struct {
 }
 
 type Map struct {
-	cells  []string
+	cells  [][]byte
 	height int
 	width  int
+}
+
+func (m Map) Print(startingPos Position) {
+	for i := range m.cells {
+		for j := range m.cells[i] {
+			if j == startingPos.X && i == startingPos.Y {
+				fmt.Print(" * ")
+			} else {
+				fmt.Printf(" %c ", m.cells[i][j])
+			}
+		}
+		fmt.Println()
+	}
 }
 
 func (m Map) StartingPosition() Position {
@@ -137,6 +160,20 @@ func (m Map) StartingPosition() Position {
 
 func (m Map) Contains(p Position) bool {
 	return (p.X >= 0 && p.X < m.width) && (p.Y >= 0 && p.Y < m.height)
+}
+
+func (m Map) WithSymbolAt(p Position, c byte) Map {
+	cells := make([][]byte, len(m.cells))
+	for i := range cells {
+		cells[i] = make([]byte, len(m.cells[i]))
+		copy(cells[i], m.cells[i])
+	}
+	cells[p.Y][p.X] = c
+	return Map{
+		cells:  cells,
+		height: m.height,
+		width:  m.width,
+	}
 }
 
 func (m Map) At(p Position) byte {

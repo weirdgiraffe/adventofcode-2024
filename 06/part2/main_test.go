@@ -26,7 +26,7 @@ func TestCompute(t *testing.T) {
 				#.........
 				......#...
 			`,
-			Expected: 41,
+			Expected: 6,
 		},
 	}
 	for i, tc := range tt {
