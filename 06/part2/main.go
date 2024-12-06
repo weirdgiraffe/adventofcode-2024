@@ -45,12 +45,34 @@ func patrolPath(m *Map) (path []Position) {
 		}
 		pos = nextPos
 	}
+
+}
+
+func PrintPath(path []Position) {
+	if len(path) == 0 {
+		return
+	}
+	prev := path[0]
+	for i := 1; i < len(path); i++ {
+		switch {
+		case prev.X < path[i].X:
+			fmt.Print(">")
+		case prev.X > path[i].X:
+			fmt.Print("<")
+		case prev.Y < path[i].Y:
+			fmt.Print("v")
+		case prev.Y > path[i].Y:
+			fmt.Print("^")
+		}
+		prev = path[i]
+	}
+	fmt.Println()
 }
 
 func patrol(text string) int {
 	m := asMap(text)
 	path := patrolPath(&m)
-	fmt.Println(path)
+	PrintPath(path)
 	return 0
 }
 
